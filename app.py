@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1LUSZiFjf2n1lB1XDNiLJiaFMjNlh7nkO
 """
 
-pip install pandas scikit-learn streamlit
+!pip install pandas scikit-learn streamlit
 
 !streamlit run app.py
 
