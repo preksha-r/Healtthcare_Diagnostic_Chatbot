@@ -7,9 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1LUSZiFjf2n1lB1XDNiLJiaFMjNlh7nkO
 """
 
-!pip install pandas scikit-learn streamlit
 
-!streamlit run app.py
 
 import pandas as pd
 import numpy as np
@@ -19,9 +17,9 @@ import streamlit as st
 import re
 
 # Load datasets
-train_df = pd.read_csv('/content/Training.csv')
-test_df = pd.read_csv('/content/Testing.csv')
-doctors_df = pd.read_csv('/content/doctors_dataset.csv', header=None, names=['Doctor', 'Link'])
+train_df = pd.read_csv('Training.csv')
+test_df = pd.read_csv('Testing.csv')
+doctors_df = pd.read_csv('doctors_dataset.csv', header=None, names=['Doctor', 'Link'])
 
 # Map diseases to specializations (extend as needed)
 disease_specialization_map = {
