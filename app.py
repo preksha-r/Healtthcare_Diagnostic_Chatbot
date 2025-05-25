@@ -6,9 +6,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
 # UI Branding
+st.set_page_config(page_title='🩺 AI Healthcare Chatbot', layout='centered')
 st.markdown("""
     <h1 style='text-align: center; color: #0d6efd;'>🩺 AI Healthcare Chatbot</h1>
-    <p style='text-align: center; color: gray;'>Describe your symptoms, severity & duration for a better diagnosis.</p>
+    <p style='text-align: center; color: gray;'>Describe your symptoms & get insights based on health patterns.</p>
 """, unsafe_allow_html=True)
 
 # Background Styling
@@ -25,6 +26,7 @@ st.markdown("""
 # Load datasets
 train_df = pd.read_csv('Training.csv')
 doctors_df = pd.read_csv('doctors_dataset.csv', header=None, names=['Doctor', 'Link'])
+education_df = pd.read_csv('disease_education.csv')
 
 # Disease Mapping
 disease_specialization_map = {
@@ -32,6 +34,7 @@ disease_specialization_map = {
     'Allergy': 'Allergist',
     'GERD': 'Gastroenterologist',
     'Bronchial Asthma': 'Pulmonologist',
+    # Add more mappings as needed
 }
 
 # Model setup
@@ -42,6 +45,7 @@ y_encoded = label_encoder.fit_transform(y)
 model = RandomForestClassifier(n_estimators=200, random_state=42)
 model.fit(X, y_encoded)
 
+# Helper functions
 def predict_disease(symptoms):
     input_vector = [1 if symptom in symptoms else 0 for symptom in X.columns]
     prediction = model.predict([input_vector])
@@ -56,27 +60,62 @@ def extract_symptoms(text):
     words = re.findall(r'\w+', text.lower())
     return [symptom for symptom in X.columns if symptom.replace('_', ' ') in ' '.join(words)]
 
-# Chat-like Input
+def get_education_info(disease):
+    match = education_df[education_df["Disease"].str.lower() == disease.lower()]
+    if not match.empty:
+        precautions = match["Precautions"].values[0].split(";")
+        did_you_know = match["DidYouKnow"].values[0]
+        return precautions, did_you_know
+    return [], ""
+
+def detect_emotional_health(text):
+    stress_indicators = ["tired", "overwhelmed", "anxious", "depressed", "fatigued"]
+    return any(word in text.lower() for word in stress_indicators)
+
+# 1️⃣ User History
+if "user_history" not in st.session_state:
+    st.session_state.user_history = []
+
+# Chat Input
 user_input = st.chat_input("Describe your symptoms:")
 
-# Severity and Duration Inputs
+# 2️⃣ Additional Inputs
 severity = st.selectbox("Symptom Severity:", ["Mild", "Moderate", "Severe"])
 duration = st.slider("Duration (Days):", min_value=1, max_value=30, value=5)
 
+# Main logic
 if user_input:
     extracted_symptoms = extract_symptoms(user_input)
+    st.session_state.user_history.append(user_input)
+
     if extracted_symptoms:
         diagnosis = predict_disease(extracted_symptoms)
         doc_name, doc_link = fetch_doctor(diagnosis)
         st.success(f"🩺 Possible condition: **{diagnosis}**")
         st.info(f"👨‍⚕️ Recommended Doctor: [{doc_name}]({doc_link})")
-        st.markdown(f"""
-        **Precautionary Steps:**  
-        - Maintain hygiene  
-        - Avoid allergens  
-        - Regular exercise  
-        - Follow prescribed medication  
-        """, unsafe_allow_html=True)
+
+        # 3️⃣ Show Education Info
+        precautions, fact = get_education_info(diagnosis)
+        if precautions:
+            st.markdown("### 🛡️ Precautionary Steps:")
+            for p in precautions:
+                st.markdown(f"- {p.strip()}")
+        if fact:
+            st.markdown("### 📘 Did You Know?")
+            st.info(fact)
+
+        # 4️⃣ Emotional Health
+        if detect_emotional_health(user_input):
+            st.warning("💙 You seem stressed. Take breaks, practice mindfulness, and consider professional advice.")
+
     else:
         st.warning("Couldn't detect known symptoms. Try being more specific.")
 
+# 5️⃣ Show Health History
+if st.button("View My Health Insights"):
+    if st.session_state.user_history:
+        st.markdown("### Your Recent Symptom Reports:")
+        for entry in st.session_state.user_history[-5:]:
+            st.markdown(f"- {entry}")
+    else:
+        st.info("No previous symptom reports found.")
